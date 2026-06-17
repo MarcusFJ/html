@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-width=1.0">
+    <title>24/7 Pantautomat - Færdig Version (Rød Scanner & LCD)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- Tema Variabler (Dark Mode er standard) --- */
+        :root {
+            --bg-container: #18181a;
+            --bg-header: #0d0d0f;
+            --bg-panel: #111;
+            --bg-inventory: #0d0d0f;
+            --border-color: #222;
+            --border-outer: #2a2a2e;
+            
+            /* Skærm (Mørkt VFD look) */
+            --vfd-bg: #050d0a;
+            --vfd-border: #1a1a1a;
+            --vfd-text: #40ffd0; 
+            --vfd-glow1: #40ffd0;
+            --vfd-glow2: rgba(64, 255, 208, 0.4);
+
+            --text-muted: #888;
+            --btn-bg: #222;
+            --btn-border: #444;
+            --btn-text: #ccc;
+        }
+
+        /* --- Light Mode Tema --- */
+        body.light-mode {
+            --bg-container: #e6e6e9;
+            --bg-header: #d1d1d6;
+            --bg-panel: #f4f4f5;
+            --bg-inventory: #e6e6e9;
+            --border-color: #b0b0b8;
+            --border-outer: #9999a1;
+            
+            /* Skærm (Lyst LCD look) */
+            --vfd-bg: #b5c4b1; /* Lyst grå-grønt LCD baggrund */
+            --vfd-border: #8b9987;
+            --vfd-text: #1a2b16; /* Mørk LCD skrift */
+            --vfd-glow1: transparent; /* Ingen glød på en lys skærm */
+            --vfd-glow2: rgba(0,0,0,0.1);
+
+            --text-muted: #555;
+            --btn-bg: #fff;
+            --btn-border: #ccc;
+            --btn-text: #333;
+        }
+
+        /* --- Base & Font --- */
+        body {
+            margin: 0;
+            padding: 0;
+            /* Flex gør at den vises i browseren */
+            display: flex; 
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: transparent; 
+            font-family: 'DotGothic16', monospace;
+            user-select: none;
+        }
+
+        /* --- Retro Kabinet --- */
+        .machine-container {
+            background: var(--bg-container);
+            width: 550px;
+            border-radius: 6px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8), inset 0 0 10px rgba(255,255,255,0.05);
+            border: 4px solid var(--border-outer);
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        /* --- Header & Logo --- */
+        .header {
+            background: var(--bg-header);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--border-color);
+            transition: all 0.3s;
+        }
+
+        .logo-placeholder {
+            height: 40px;
+            content: url('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/24-7_Logo.svg/512px-24-7_Logo.svg.png');
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.2));
+            pointer-events: none;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        /* Theme Toggle Knap */
+        .theme-toggle {
+            background: var(--btn-bg);
+            border: 2px solid var(--btn-border);
+            color: var(--btn-text);
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+        .theme-toggle:hover {
+            border-color: #ff3333; /* Rød kant ved hover */
+        }
+
+        .flags-container {
+            display: flex;
+            gap: 8px;
+        }
+
+        .flag-btn {
+            width: 32px;
+            height: 24px;
+            cursor: pointer;
+            border: 2px solid #333;
+            border-radius: 2px;
+            transition: 0.2s;
+            opacity: 0.4;
+            filter: grayscale(80%);
+        }
+        .flag-btn:hover { opacity: 0.8; transform: scale(1.05); }
+        .flag-btn.active {
+            opacity: 1;
+            filter: grayscale(0%);
+            border-color: #ff3333;
+            box-shadow: 0 0 8px rgba(255, 51, 51, 0.5);
+        }
+
+        /* --- Main Content (Split Layout) --- */
+        .main-section {
+            display: flex;
+            border-bottom: 3px solid var(--border-color);
+            background: var(--bg-panel);
+            transition: all 0.3s;
+        }
+
+        /* --- Venstre Side (Display & Knapper) --- */
+        .left-panel {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            border-right: 3px solid var(--border-color);
+        }
+
+        .vfd-display {
+            background-color: var(--vfd-bg);
+            border: 4px inset var(--vfd-border);
+            padding: 15px;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .vfd-text {
+            color: var(--vfd-text);
+            text-shadow: 0 0 4px var(--vfd-glow1), 0 0 8px var(--vfd-glow2);
+            font-size: 20px;
+            margin: 0;
+            line-height: 1.2;
+            text-transform: uppercase;
+            transition: all 0.3s;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .btn-action {
+            flex: 1;
+            padding: 12px 5px;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            font-size: 16px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: 0.1s;
+            color: #fff;
+            text-transform: uppercase;
+        }
+
+        .btn-payout { background-color: #1b5e20; border-color: #2e7d32; box-shadow: 0 4px 0 #003300; }
+        .btn-payout:active { transform: translateY(4px); box-shadow: 0 0 0 #003300; }
+
+        .btn-donate { background-color: #01579b; border-color: #0277bd; box-shadow: 0 4px 0 #002f6c; }
+        .btn-donate:active { transform: translateY(4px); box-shadow: 0 0 0 #002f6c; }
+
+        /* --- Højre Side (Indkastningshul - NU MED RØD SCANNER) --- */
+        .right-panel {
+            width: 160px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .hole-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .hole {
+            width: 90px;
+            height: 90px;
+            background: #000;
+            border-radius: 50%;
+            box-shadow: inset 0 20px 30px rgba(0,0,0,1), 0 2px 0 rgba(255,255,255,0.1);
+            border: 6px solid #2a2a2a;
+            transition: 0.2s;
+        }
+
+        .hole.drag-over {
+            background: #2a1111; /* Svagt rød baggrund */
+            border-color: #ff3333; /* Rød scanner-kant */
+            box-shadow: inset 0 0 25px rgba(255, 51, 51, 0.4), 0 0 15px rgba(255, 51, 51, 0.2);
+            transform: scale(1.05);
+        }
+
+        .hole.active { 
+            background: #ff3333; /* Et skarpt rødt flash når den dropper i */
+            transition: 0.05s; 
+        }
+
+        /* --- Bund (Inventory / Taske) --- */
+        .inventory-section {
+            padding: 15px 20px;
+            background: var(--bg-inventory);
+            transition: all 0.3s;
+        }
+
+        .inventory-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .item-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            height: 110px; 
+            align-content: flex-start;
+            padding: 10px;
+            background: var(--bg-panel);
+            border: 2px dashed var(--border-color);
+            border-radius: 4px;
+            overflow-y: auto; 
+            transition: all 0.3s;
+        }
+
+        .item-area::-webkit-scrollbar { width: 10px; }
+        .item-area::-webkit-scrollbar-track {
+            background: var(--bg-inventory);
+            border-radius: 0 4px 4px 0;
+            border-left: 1px solid var(--border-color);
+        }
+        .item-area::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        .item-area::-webkit-scrollbar-thumb:hover { background: #ff3333; } /* Rød scrollbar ved hover */
+
+        /* --- Drag & Drop Flasker (NEDTONEDE FARVER) --- */
+        .pant-item {
+            cursor: grab;
+            transition: transform 0.1s;
+            position: relative;
+        }
+        .pant-item:active { cursor: grabbing; transform: scale(0.9); }
+
+        .item-can {
+            width: 24px;
+            height: 40px;
+            background: linear-gradient(to right, #6b6b6b, #9e9e9e, #6b6b6b);
+            border-radius: 4px;
+            border-top: 4px solid #b3b3b3;
+            border-bottom: 2px solid #b3b3b3;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .item-small {
+            width: 20px;
+            height: 50px;
+            background: linear-gradient(to right, #404f40, #5c735c, #404f40);
+            border-radius: 4px 4px 2px 2px;
+            position: relative;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            margin-top: 10px; 
+        }
+        .item-small::before {
+            content: ""; position: absolute; top: -10px; left: 5px; width: 10px; height: 10px; background: inherit;
+        }
+
+        .item-large {
+            width: 28px;
+            height: 65px;
+            background: linear-gradient(to right, #3b4252, #4c566a, #3b4252);
+            border-radius: 6px 6px 2px 2px;
+            position: relative;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            margin-top: 15px;
+        }
+        .item-large::before {
+            content: ""; position: absolute; top: -15px; left: 8px; width: 12px; height: 15px; background: inherit;
+        }
+
+        .btn-spawn {
+            background: var(--btn-bg);
+            color: var(--text-muted);
+            border: 1px solid var(--btn-border);
+            padding: 2px 8px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn-spawn:hover { color: #ff3333; border-color: #ff3333; }
+    </style>
+</head>
+<body>
+
+    <div class="machine-container">
+        <!-- Header -->
+        <div class="header">
+            <img class="logo-placeholder" alt="24/7 Logo">
+            <div class="header-controls">
+                <button class="theme-toggle" onclick="toggleTheme()">SKIFT TEMA</button>
+                <div class="flags-container">
+                    <img src="https://flagcdn.com/w40/dk.png" id="flag-da" class="flag-btn active" onclick="changeLanguage('da')" alt="Dansk" draggable="false">
+                    <img src="https://flagcdn.com/w40/gb.png" id="flag-en" class="flag-btn" onclick="changeLanguage('en')" alt="English" draggable="false">
+                    <img src="https://flagcdn.com/w40/de.png" id="flag-de" class="flag-btn" onclick="changeLanguage('de')" alt="Deutsch" draggable="false">
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Split Content -->
+        <div class="main-section">
+            <div class="left-panel">
+                <div class="vfd-display">
+                    <p class="vfd-text" id="vfd-line1">VELKOMMEN!</p>
+                    <p class="vfd-text" id="vfd-line2">I ALT: 0.00 DKK</p>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn-action btn-payout" id="btn-payout" onclick="finishSession('payout')">UDBETAL</button>
+                    <button class="btn-action btn-donate" id="btn-donate" onclick="finishSession('donate')">DONÉR</button>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="hole-wrapper">
+                    <div class="hole" id="insert-hole" ondrop="dropItem(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"></div>
+                    <p id="txt-insert" style="font-size: 14px; color: var(--text-muted); margin-top: 15px; text-transform: uppercase; text-align: center;">TRÆK PANT HER</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory -->
+        <div class="inventory-section">
+            <div class="inventory-header">
+                <span id="txt-inventory">DIN TASKE (TRÆK PANT HERFRA)</span>
+                <!-- Knap til at spawne pant igen -->
+                <button class="btn-spawn" onclick="spawnRandomItems(10)">+ FIND MERE</button>
+            </div>
+            <div class="item-area" id="item-area">
+                <!-- Pant genereres her via JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let totalAmount = 0.00;
+        let currentLang = 'da';
+        let itemCounter = 0; 
+
+        // Priser på pant
+        const prices = {
+            'can': 1.00,
+            'small': 1.50,
+            'large': 3.00
+        };
+
+        const translations = {
+            da: { welcome: "VELKOMMEN!", total: "I ALT", insert: "TRÆK PANT HER", inventory: "DIN TASKE (TRÆK PANT HERFRA)", can: "DÅSE", small: "LILLE FLASKE", large: "STOR FLASKE", payout: "UDBETAL", donate: "DONÉR", inserted: "INDSAT", currency: "DKK", thanks: "TAK FOR PANTE!", donated: "PENGE DONERET!" },
+            en: { welcome: "WELCOME!", total: "TOTAL", insert: "DRAG BOTTLES HERE", inventory: "YOUR BAG", can: "CAN", small: "SMALL BOTTLE", large: "LARGE BOTTLE", payout: "PAYOUT", donate: "DONATE", inserted: "INSERTED", currency: "$", thanks: "THANKS FOR RECYCLING!", donated: "MONEY DONATED!" },
+            de: { welcome: "WILLKOMMEN!", total: "GESAMT", insert: "FLASCHEN HIER ZIEHEN", inventory: "DEINE TASCHE", can: "DOSE", small: "KLEINE FLASCHE", large: "GROßE FLASCHE", payout: "AUSZAHLEN", donate: "SPENDEN", inserted: "EINGEWORFEN", currency: "€", thanks: "DANKE FÜRS PFAND!", donated: "GELD GESPENDET!" }
+        };
+
+        // --- Init: Spawn pant automatisk ved load ---
+        window.onload = function() {
+            spawnRandomItems(15); 
+        };
+
+        // --- Hjælpefunktion: Spawn Tilfældige Flasker ---
+        function spawnRandomItems(amount) {
+            const area = document.getElementById("item-area");
+            const types = [
+                { type: 'can', price: prices.can, class: 'item-can' },
+                { type: 'small', price: prices.small, class: 'item-small' },
+                { type: 'large', price: prices.large, class: 'item-large' }
+            ];
+
+            for(let i=0; i<amount; i++) {
+                itemCounter++;
+                const randomItem = types[Math.floor(Math.random() * types.length)];
+                
+                const div = document.createElement("div");
+                div.id = `pant-${itemCounter}`;
+                div.className = `pant-item ${randomItem.class}`;
+                div.draggable = true;
+                div.dataset.type = randomItem.type;
+                div.dataset.price = randomItem.price;
+                
+                div.addEventListener('dragstart', dragStart);
+
+                area.appendChild(div);
+            }
+        }
+
+        // --- Drag & Drop ---
+        function allowDrop(ev) { ev.preventDefault(); }
+        function dragEnter(ev) { ev.preventDefault(); document.getElementById('insert-hole').classList.add('drag-over'); }
+        function dragLeave(ev) { document.getElementById('insert-hole').classList.remove('drag-over'); }
+        function dragStart(ev) {
+            ev.dataTransfer.setData("id", ev.target.id);
+            ev.dataTransfer.setData("type", ev.target.dataset.type);
+            ev.dataTransfer.setData("price", ev.target.dataset.price);
+        }
+
+        function dropItem(ev) {
+            ev.preventDefault();
+            const hole = document.getElementById('insert-hole');
+            hole.classList.remove('drag-over');
+
+            const id = ev.dataTransfer.getData("id");
+            const type = ev.dataTransfer.getData("type");
+            const price = parseFloat(ev.dataTransfer.getData("price"));
+
+            if(id && type && !isNaN(price)) {
+                hole.classList.add('active');
+                setTimeout(() => hole.classList.remove('active'), 100);
+
+                const draggedElement = document.getElementById(id);
+                if(draggedElement) draggedElement.remove();
+
+                processPawn(type, price);
+            }
+        }
+
+        // --- Pant Logik ---
+        function processPawn(type, price) {
+            const t = translations[currentLang];
+            totalAmount += price;
+            updateDisplay(`${t.inserted}: ${t[type]}`);
+        }
+
+        function updateDisplay(line1Text) {
+            const t = translations[currentLang];
+            document.getElementById("vfd-line1").innerText = line1Text;
+            document.getElementById("vfd-line2").innerText = `${t.total}: ${totalAmount.toFixed(2)} ${t.currency}`;
+        }
+
+        // --- Theme Toggle ---
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+        }
+
+        // --- Skift Sprog ---
+        function changeLanguage(langCode) {
+            currentLang = langCode;
+            const t = translations[currentLang];
+            document.querySelectorAll('.flag-btn').forEach(flag => flag.classList.remove('active'));
+            document.getElementById(`flag-${langCode}`).classList.add('active');
+            document.getElementById("txt-insert").innerText = t.insert;
+            document.getElementById("txt-inventory").innerText = t.inventory;
+            document.getElementById("btn-payout").innerText = t.payout;
+            document.getElementById("btn-donate").innerText = t.donate;
+            updateDisplay(t.welcome);
+        }
+
+        // --- Afslut Session (POST til LUA) ---
+        function finishSession(action) {
+            const t = translations[currentLang];
+            if (totalAmount === 0) return;
+
+            if (action === 'payout') {
+                updateDisplay(t.thanks);
+            } else if (action === 'donate') {
+                updateDisplay(t.donated);
+            }
+
+            setTimeout(() => {
+                totalAmount = 0.00;
+                updateDisplay(t.welcome);
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
